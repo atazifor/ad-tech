@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  aerospike:
+    image: aerospike/aerospike-server-enterprise:latest
+    container_name: aerospike-rtb
+    ports:
+      - "3000:3000"  # Service port
+      - "3001:3001"  # Fabric port
+      - "3002:3002"  # Heartbeat port
+      - "3003:3003"  # Admin port
+    environment:
+      - NAMESPACE=rtb
+      - REPLICATION_FACTOR=1
+      - MEM_GB=1
+      - DEFAULT_TTL=0
+    networks:
+      - rtb-network
+    healthcheck:
+      test: ["CMD", "asinfo", "-v", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  rtb-network:
+    driver: bridge

@@ -1,0 +1,25 @@
+{
+  "id": "test-request-123",
+  "imp": [{
+    "id": "1",
+    "banner": {
+      "w": 300,
+      "h": 250
+    },
+    "bidfloor": 0.5
+  }],
+  "site": {
+    "id": "site-123",
+    "domain": "example.com"
+  },
+  "device": {
+    "ip": "192.168.1.1",
+    "ua": "Mozilla/5.0...",
+    "geo": {
+      "country": "USA"
+    }
+  },
+  "user": {
+    "id": "user-456"
+  }
+}

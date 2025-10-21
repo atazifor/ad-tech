@@ -1,0 +1,47 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: rtb-engine
+
+aerospike:
+  # Single node for Phase 1, cluster for Phase 5
+  hosts: localhost:3000
+  namespace: rtb
+
+rtb:
+  # Bidding configuration
+  max-bid-timeout-ms: 50
+  default-currency: USD
+
+  # Budget tracking
+  budget-check-enabled: true
+  budget-sync-interval-ms: 100
+
+  # Frequency capping
+  frequency-cap-enabled: true
+  frequency-window-hours: 24
+
+  # Performance tuning
+  thread-pool-size: 100
+  request-queue-size: 10000
+
+# Logging
+logging:
+  level:
+    com.example.rtb: INFO
+    com.aerospike: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Metrics
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
