@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTB Campaign Geo Targeting - Interactive Map</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; }
+
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+            max-width: 300px;
+        }
+
+        .info-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .info-panel .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .info-panel .stat-label {
+            color: #666;
+        }
+
+        .info-panel .stat-value {
+            font-weight: 600;
+            color: #0a0;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 10px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+
+        .controls label {
+            display: block;
+            margin: 8px 0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .controls input[type="checkbox"] {
+            margin-right: 8px;
+        }
+
+        .controls input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .controls button {
+            width: 100%;
+            padding: 8px;
+            margin-top: 8px;
+            background: #0a0;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .controls button:hover {
+            background: #060;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 2000;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="info-panel">
+        <h3>Campaign Info</h3>
+        <div class="stat">
+            <span class="stat-label">Campaign ID:</span>
+            <span class="stat-value" id="campaignId">-</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Tiler:</span>
+            <span class="stat-value" id="tiler">-</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Allowed Tiles:</span>
+            <span class="stat-value" id="allowedTiles">-</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <label>
+            <input type="checkbox" id="showTiles" checked> Show Allowed Tiles
+        </label>
+        <label>
+            <input type="checkbox" id="showPolygon" checked> Show Campaign Polygon
+        </label>
+        <label>
+            <input type="checkbox" id="showSamplePoints"> Show Tile Sample Points
+        </label>
+        <input type="text" id="campaignInput" placeholder="Campaign ID" value="nike">
+        <button onclick="loadCampaign()">Load Campaign</button>
+    </div>
+
+    <div class="loading" id="loading" style="display: none;">Loading...</div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+
+    <script>
+        // Initialize map centered on Yaoundé, Cameroon
+        const map = L.map('map').setView([3.925, 11.525], 12);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        // Layer groups for toggleable layers
+        let tilesLayer = L.layerGroup().addTo(map);
+        let polygonLayer = L.layerGroup().addTo(map);
+
+        // Load campaign data
+        async function loadCampaign() {
+            const campaignId = document.getElementById('campaignInput').value || 'nike';
+            const loading = document.getElementById('loading');
+
+            loading.style.display = 'block';
+
+            try {
+                // First, load the demo campaign data (initialize tiles)
+                const loadResponse = await fetch(`/api/geo/campaign/${campaignId}/load-demo`, {
+                    method: 'POST'
+                });
+
+                if (!loadResponse.ok) {
+                    throw new Error('Failed to load campaign');
+                }
+
+                // Then fetch GeoJSON data for visualization
+                const showSamplePoints = document.getElementById('showSamplePoints').checked;
+                const response = await fetch(`/api/geo/geojson/${campaignId}?showSamplePoints=${showSamplePoints}`);
+                const data = await response.json();
+
+                // Clear existing layers
+                tilesLayer.clearLayers();
+                polygonLayer.clearLayers();
+
+                // Update info panel
+                document.getElementById('campaignId').textContent = data.metadata.campaign;
+                document.getElementById('tiler').textContent = data.metadata.tiler;
+                document.getElementById('allowedTiles').textContent = data.metadata.allowedTiles;
+
+                // Add features to map
+                data.features.forEach(feature => {
+                    const props = feature.properties;
+
+                    if (props.type === 'allowed-tile' || props.type === 'excluded-tile') {
+                        // Add tile (allowed or excluded)
+                        const tile = L.geoJSON(feature, {
+                            style: {
+                                color: props.stroke,
+                                weight: props['stroke-width'],
+                                fillColor: props.fill,
+                                fillOpacity: props['fill-opacity']
+                            }
+                        });
+
+                        // Add popup with tile info
+                        tile.bindPopup(`
+                            <strong>Tile ID:</strong> ${props.tileId}<br>
+                            <strong>Status:</strong> ${props.isAllowed ? '✓ Allowed' : '✗ Excluded (< 50% coverage)'}
+                        `);
+
+                        tile.addTo(tilesLayer);
+                    } else if (props.type === 'polygon-vertex') {
+                        // Add polygon vertex marker (blue diamond)
+                        const marker = L.circleMarker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], {
+                            radius: 7,
+                            fillColor: '#4169e1',
+                            color: '#000080',
+                            weight: 2,
+                            fillOpacity: 0.9
+                        });
+
+                        marker.bindPopup(`
+                            <strong>Polygon Vertex #${props.vertexNumber}</strong><br>
+                            Lat: ${props.lat.toFixed(4)}<br>
+                            Lon: ${props.lon.toFixed(4)}
+                        `);
+
+                        marker.addTo(polygonLayer);
+                    } else if (props.type === 'sample-point') {
+                        // Add tile sample point (purple if inside polygon, orange if outside)
+                        const isInside = props.insidePolygon;
+                        const marker = L.circleMarker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], {
+                            radius: 3,
+                            fillColor: isInside ? '#9370db' : '#ff8c00',
+                            color: isInside ? '#4b0082' : '#d2691e',
+                            weight: 1,
+                            fillOpacity: 0.8
+                        });
+
+                        marker.bindPopup(`
+                            <strong>Sample Point (${props.position})</strong><br>
+                            Tile: ${props.tileId}<br>
+                            Inside Polygon: ${isInside ? '✓ Yes' : '✗ No'}
+                        `);
+
+                        marker.addTo(tilesLayer);
+                    } else if (props.type === 'test-point') {
+                        // Add test point (green if allowed, red if not)
+                        const color = props.allowed ? '#0c0' : '#c00';
+                        const marker = L.circleMarker([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], {
+                            radius: 4,
+                            fillColor: color,
+                            color: props.allowed ? '#080' : '#800',
+                            weight: 1,
+                            fillOpacity: 0.8
+                        });
+
+                        marker.bindPopup(`
+                            <strong>Test Point</strong><br>
+                            Lat: ${feature.geometry.coordinates[1].toFixed(4)}<br>
+                            Lon: ${feature.geometry.coordinates[0].toFixed(4)}<br>
+                            Status: ${props.allowed ? '✓ Allowed' : '✗ Not Allowed'}
+                        `);
+
+                        marker.addTo(tilesLayer);
+                    } else {
+                        // Add campaign polygon
+                        const polygon = L.geoJSON(feature, {
+                            style: {
+                                color: props.stroke,
+                                weight: props['stroke-width'],
+                                fillColor: props.fill,
+                                fillOpacity: props['fill-opacity']
+                            }
+                        });
+
+                        polygon.bindPopup(`<strong>${props.name}</strong>`);
+                        polygon.addTo(polygonLayer);
+                    }
+                });
+
+                // Fit map to polygon bounds
+                if (data.metadata.bbox) {
+                    const [minLat, minLon, maxLat, maxLon] = data.metadata.bbox;
+                    map.fitBounds([[minLat, minLon], [maxLat, maxLon]]);
+                }
+
+            } catch (error) {
+                console.error('Error loading campaign:', error);
+                alert('Failed to load campaign data');
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        // Toggle layers
+        document.getElementById('showTiles').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                map.addLayer(tilesLayer);
+            } else {
+                map.removeLayer(tilesLayer);
+            }
+        });
+
+        document.getElementById('showPolygon').addEventListener('change', (e) => {
+            if (e.target.checked) {
+                map.addLayer(polygonLayer);
+            } else {
+                map.removeLayer(polygonLayer);
+            }
+        });
+
+        // Reload campaign when sample points toggle changes
+        document.getElementById('showSamplePoints').addEventListener('change', () => {
+            loadCampaign();
+        });
+
+        // Load default campaign on page load
+        loadCampaign();
+    </script>
+</body>
+</html>
