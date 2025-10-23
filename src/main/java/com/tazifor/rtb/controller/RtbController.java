@@ -125,6 +125,14 @@ public class RtbController {
                             </div>
                         </a>
 
+                        <a href="/benchmark.html" class="option">
+                            <div class="option-icon">⚡</div>
+                            <div class="option-content">
+                                <h3>Performance Benchmark</h3>
+                                <p>Compare point-in-polygon vs tile-based precomputation performance</p>
+                            </div>
+                        </a>
+
                         <a href="/api/geo/viz/nike" class="option">
                             <div class="option-icon">📊</div>
                             <div class="option-content">
