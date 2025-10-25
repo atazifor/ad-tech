@@ -212,6 +212,19 @@
 
         <div class="controls">
             <div class="control-group">
+                <label>Tiler Type</label>
+                <select id="tilerType" onchange="updateResolutionVisibility()">
+                    <option value="rect">Rectangular Grid</option>
+                    <option value="h3">H3 Hexagonal</option>
+                    <option value="s2">S2 Spherical</option>
+                </select>
+            </div>
+            <div class="control-group" id="resolutionGroup" style="display: none;">
+                <label id="resolutionLabel">Resolution</label>
+                <input type="number" id="resolution" value="8" min="0" max="30">
+                <small id="resolutionHint" style="color: #888; font-size: 11px; margin-top: 4px;"></small>
+            </div>
+            <div class="control-group">
                 <label>Bid Requests (M)</label>
                 <input type="number" id="bidRequests" value="10000" min="100" max="100000">
             </div>
@@ -238,7 +251,8 @@
         </div>
 
         <div class="results" id="results">
-            <h2 style="margin-bottom: 20px;">Results</h2>
+            <h2 style="margin-bottom: 10px;">Results</h2>
+            <p id="tilerInfo" style="color: #666; margin-bottom: 20px; font-size: 14px;"></p>
 
             <div class="metrics">
                 <div class="metric-card">
@@ -286,7 +300,30 @@
     <script>
         let chart = null;
 
+        function updateResolutionVisibility() {
+            const tilerType = document.getElementById('tilerType').value;
+            const resolutionGroup = document.getElementById('resolutionGroup');
+            const resolutionInput = document.getElementById('resolution');
+            const resolutionHint = document.getElementById('resolutionHint');
+
+            if (tilerType === 'rect') {
+                resolutionGroup.style.display = 'none';
+            } else if (tilerType === 'h3') {
+                resolutionGroup.style.display = 'flex';
+                resolutionInput.max = 15;
+                resolutionInput.value = 8;
+                resolutionHint.textContent = 'RTB: 7-9 (461m-1.2km edges)';
+            } else if (tilerType === 's2') {
+                resolutionGroup.style.display = 'flex';
+                resolutionInput.max = 30;
+                resolutionInput.value = 13;
+                resolutionHint.textContent = 'RTB: 12-15 (352m-2.8km edges)';
+            }
+        }
+
         async function runBenchmark() {
+            const tilerType = document.getElementById('tilerType').value;
+            const resolution = document.getElementById('resolution').value;
             const bidRequests = document.getElementById('bidRequests').value;
             const campaigns = document.getElementById('campaigns').value;
             const coverage = document.getElementById('coverage').value;
@@ -301,9 +338,12 @@
             results.style.display = 'none';
 
             try {
-                const response = await fetch(
-                    `/api/geo/bench/rtb?bidRequests=${bidRequests}&campaigns=${campaigns}&coveragePercent=${coverage}`
-                );
+                let url = `/api/geo/bench/rtb?tilerType=${tilerType}&bidRequests=${bidRequests}&campaigns=${campaigns}&coveragePercent=${coverage}`;
+                if (tilerType !== 'rect') {
+                    url += `&resolution=${resolution}`;
+                }
+
+                const response = await fetch(url);
                 const data = await response.json();
 
                 // Update progress to 100%
@@ -329,6 +369,10 @@
         function displayResults(data) {
             document.getElementById('results').style.display = 'block';
             document.getElementById('progressContainer').style.display = 'none';
+
+            // Update tiler info
+            document.getElementById('tilerInfo').textContent =
+                `Using tiler: ${data.tiler || 'Unknown'}`;
 
             // Update metrics
             document.getElementById('speedup').innerHTML =

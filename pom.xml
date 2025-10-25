@@ -80,6 +80,20 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
         </dependency>
+
+        <!-- H3 Geo (Uber's Hexagonal Hierarchical Geospatial Indexing System) -->
+        <dependency>
+            <groupId>com.uber</groupId>
+            <artifactId>h3</artifactId>
+            <version>4.1.1</version>
+        </dependency>
+
+        <!-- S2 Geometry (Google's Spherical Geometry Library) -->
+        <dependency>
+            <groupId>com.google.geometry</groupId>
+            <artifactId>s2-geometry</artifactId>
+            <version>2.0.0</version>
+        </dependency>
     </dependencies>
 
     <build>

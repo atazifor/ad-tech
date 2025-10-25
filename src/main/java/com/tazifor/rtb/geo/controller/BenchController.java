@@ -3,6 +3,9 @@ package com.tazifor.rtb.geo.controller;
 import com.tazifor.rtb.geo.model.BBox;
 import com.tazifor.rtb.geo.service.BenchmarkService;
 import com.tazifor.rtb.geo.service.CampaignTilePrecomputeService;
+import com.tazifor.rtb.geo.spi.H3Tiler;
+import com.tazifor.rtb.geo.spi.S2Tiler;
+import com.tazifor.rtb.geo.spi.Tiler;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -29,11 +32,15 @@ public class BenchController {
     /**
      * Run realistic RTB benchmark: M bid requests × N campaigns
      *
-     * Example:
-     * GET /api/geo/bench/rtb?bidRequests=10000&campaigns=100&minLat=3.7&minLon=11.3&maxLat=4.1&maxLon=11.8
+     * Examples:
+     * GET /api/geo/bench/rtb?bidRequests=10000&campaigns=100&tilerType=rect
+     * GET /api/geo/bench/rtb?bidRequests=10000&campaigns=100&tilerType=h3&resolution=8
+     * GET /api/geo/bench/rtb?bidRequests=10000&campaigns=100&tilerType=s2&resolution=13
      */
     @GetMapping("/rtb")
     public Map<String, Object> runRtbBenchmark(
+        @RequestParam(defaultValue = "rect") String tilerType,
+        @RequestParam(required = false) Integer resolution,
         @RequestParam(defaultValue = "10000") int bidRequests,
         @RequestParam(defaultValue = "100") int campaigns,
         @RequestParam(defaultValue = "3.7") double minLat,
@@ -49,13 +56,20 @@ public class BenchController {
         try {
             BBox sampleBox = new BBox(minLat, minLon, maxLat, maxLon);
 
+            // Select tiler based on type
+            Tiler tiler = switch (tilerType.toLowerCase()) {
+                case "h3" -> resolution != null ? new H3Tiler(resolution) : new H3Tiler();
+                case "s2" -> resolution != null ? new S2Tiler(resolution) : new S2Tiler();
+                default -> pre.tiler(); // RectGridTiler
+            };
+
             // Generate synthetic campaigns
             List<BenchmarkService.Campaign> campaignList =
-                bench.generateCampaigns(campaigns, sampleBox, pre.tiler(), coveragePercent);
+                bench.generateCampaigns(campaigns, sampleBox, tiler, coveragePercent);
 
             // Run benchmark with progress callback
             var result = bench.runRtbScenario(
-                pre.tiler(),
+                tiler,
                 campaignList,
                 sampleBox,
                 bidRequests,

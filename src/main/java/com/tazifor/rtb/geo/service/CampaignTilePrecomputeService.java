@@ -3,7 +3,9 @@ package com.tazifor.rtb.geo.service;
 import com.tazifor.rtb.geo.model.LatLon;
 import com.tazifor.rtb.geo.model.Polygon;
 import com.tazifor.rtb.geo.model.TileKey;
+import com.tazifor.rtb.geo.spi.H3Tiler;
 import com.tazifor.rtb.geo.spi.RectGridTiler;
+import com.tazifor.rtb.geo.spi.S2Tiler;
 import com.tazifor.rtb.geo.spi.Tiler;
 import org.springframework.stereotype.Service;
 import java.util.*;
@@ -16,6 +18,16 @@ public class CampaignTilePrecomputeService {
 
     public void useRectGrid(double dLat, double dLon) {
         this.tiler = new RectGridTiler(dLat, dLon);
+        // NOTE: callers should re-run loadCampaign after swapping tiler
+    }
+
+    public void useH3(int resolution) {
+        this.tiler = new H3Tiler(resolution);
+        // NOTE: callers should re-run loadCampaign after swapping tiler
+    }
+
+    public void useS2(int resolution) {
+        this.tiler = new S2Tiler(resolution);
         // NOTE: callers should re-run loadCampaign after swapping tiler
     }
 

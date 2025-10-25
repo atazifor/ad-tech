@@ -134,6 +134,18 @@
     </div>
 
     <div class="controls">
+        <label style="font-weight: 600; margin-bottom: 10px; display: block;">Tiler Configuration</label>
+        <select id="tilerType" style="width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ddd; border-radius: 4px;" onchange="updateResolutionVisibility()">
+            <option value="rect">Rectangular Grid</option>
+            <option value="h3">H3 Hexagonal</option>
+            <option value="s2">S2 Spherical</option>
+        </select>
+        <div id="resolutionControl" style="display: none; margin-bottom: 8px;">
+            <input type="number" id="resolution" placeholder="Resolution" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;" value="8" min="0" max="30">
+            <small id="resolutionHint" style="color: #666; font-size: 12px; display: block; margin-top: 4px;"></small>
+        </div>
+
+        <label style="font-weight: 600; margin-top: 15px; margin-bottom: 10px; display: block;">Display Options</label>
         <label>
             <input type="checkbox" id="showTiles" checked> Show Allowed Tiles
         </label>
@@ -143,6 +155,8 @@
         <label>
             <input type="checkbox" id="showSamplePoints"> Show Tile Sample Points
         </label>
+
+        <label style="font-weight: 600; margin-top: 15px; margin-bottom: 10px; display: block;">Campaign</label>
         <input type="text" id="campaignInput" placeholder="Campaign ID" value="nike">
         <button onclick="loadCampaign()">Load Campaign</button>
     </div>
@@ -168,15 +182,54 @@
         let tilesLayer = L.layerGroup().addTo(map);
         let polygonLayer = L.layerGroup().addTo(map);
 
+        // Update resolution visibility based on tiler type
+        function updateResolutionVisibility() {
+            const tilerType = document.getElementById('tilerType').value;
+            const resolutionControl = document.getElementById('resolutionControl');
+            const resolutionInput = document.getElementById('resolution');
+            const resolutionHint = document.getElementById('resolutionHint');
+
+            if (tilerType === 'rect') {
+                resolutionControl.style.display = 'none';
+            } else if (tilerType === 'h3') {
+                resolutionControl.style.display = 'block';
+                resolutionInput.max = 15;
+                resolutionInput.value = 8;
+                resolutionHint.textContent = 'RTB: 7-9 (461m-1.2km edges)';
+            } else if (tilerType === 's2') {
+                resolutionControl.style.display = 'block';
+                resolutionInput.max = 30;
+                resolutionInput.value = 13;
+                resolutionHint.textContent = 'RTB: 12-15 (352m-2.8km edges)';
+            }
+        }
+
         // Load campaign data
         async function loadCampaign() {
             const campaignId = document.getElementById('campaignInput').value || 'nike';
+            const tilerType = document.getElementById('tilerType').value;
+            const resolution = document.getElementById('resolution').value;
             const loading = document.getElementById('loading');
 
             loading.style.display = 'block';
 
             try {
-                // First, load the demo campaign data (initialize tiles)
+                // First, set the tiler type
+                let tilerEndpoint = '';
+                if (tilerType === 'h3') {
+                    tilerEndpoint = `/api/geo/tiler/h3?resolution=${resolution}`;
+                } else if (tilerType === 's2') {
+                    tilerEndpoint = `/api/geo/tiler/s2?resolution=${resolution}`;
+                } else {
+                    tilerEndpoint = `/api/geo/tiler/rect?dLat=0.01&dLon=0.01`;
+                }
+
+                const tilerResponse = await fetch(tilerEndpoint, { method: 'POST' });
+                if (!tilerResponse.ok) {
+                    throw new Error('Failed to set tiler');
+                }
+
+                // Then, load the demo campaign data (initialize tiles)
                 const loadResponse = await fetch(`/api/geo/campaign/${campaignId}/load-demo`, {
                     method: 'POST'
                 });

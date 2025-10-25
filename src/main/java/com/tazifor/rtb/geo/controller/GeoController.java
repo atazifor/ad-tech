@@ -27,6 +27,18 @@ public class GeoController {
         return Map.of("tiler", svc.tilerName());
     }
 
+    @PostMapping("/tiler/h3")
+    public Map<String,Object> setH3(@RequestParam(defaultValue = "8") int resolution) {
+        svc.useH3(resolution);
+        return Map.of("tiler", svc.tilerName(), "resolution", resolution);
+    }
+
+    @PostMapping("/tiler/s2")
+    public Map<String,Object> setS2(@RequestParam(defaultValue = "13") int resolution) {
+        svc.useS2(resolution);
+        return Map.of("tiler", svc.tilerName(), "resolution", resolution);
+    }
+
     // 2) Load a demo polygon for a campaign (Yaoundé-ish rough quad, tweak as you like)
     @PostMapping("/campaign/{id}/load-demo")
     public Map<String,Object> loadDemo(@PathVariable String id,
