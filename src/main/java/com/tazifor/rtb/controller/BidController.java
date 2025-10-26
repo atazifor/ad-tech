@@ -74,16 +74,4 @@ public class BidController {
         ));
     }
 
-    /**
-     * Initialize test campaign for Phase 1 demo
-     */
-    @PostMapping("/setup/test-campaign")
-    public ResponseEntity<Campaign> createTestCampaign() {
-        Campaign campaign = biddingService.createTestCampaign();
-        if (campaign != null) {
-            return ResponseEntity.ok(campaign);
-        } else {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
 }
