@@ -2,7 +2,6 @@ package com.tazifor.rtb.controller;
 
 import com.tazifor.rtb.model.BidRequest;
 import com.tazifor.rtb.model.BidResponse;
-import com.tazifor.rtb.model.Campaign;
 import com.tazifor.rtb.service.BiddingService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

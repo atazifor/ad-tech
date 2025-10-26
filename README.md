@@ -183,3 +183,43 @@ This loop repeats billions of times per day, in under 100 ms each time.
 | **Allow / Block Lists** | Explicit domains/apps/categories an advertiser allows or forbids |
 | **Auction** | The real-time competition between DSPs to buy an impression |
 
+---
+
+## Technical Documentation
+
+This repository implements a production-ready RTB (Real-Time Bidding) engine built in phases. Each phase adds new capabilities:
+
+### Implementation Phases
+
+- **[Phase 1: Basic RTB Bidding](docs/phase1.md)** - Foundation: OpenRTB protocol, Aerospike integration, basic bid response generation
+- **[Phase 2: Multi-Campaign Targeting](docs/phase2.md)** - Campaign management, geographic/device targeting, campaign selection algorithms
+  - **[Phase 2 Quick Reference](docs/phase2-summary.md)** - API cheat sheet, targeting patterns, performance tips
+- **[Phase 3: Budget Tracking](docs/phase3.md)** - Real-time spend tracking, atomic budget operations, auto-pause on depletion
+  - **[Phase 3 Quick Reference](docs/phase3-summary.md)** - Budget math, atomic patterns, race condition testing
+
+### Advanced Topics
+
+- **[Tile-Based Geo-Targeting](docs/tiles.md)** - High-performance geo-fencing using H3 hexagonal grids and S2 spherical geometry
+
+### Technology Stack
+
+- **Language**: Java 17 + Spring Boot 3.5
+- **Database**: Aerospike (sub-millisecond reads/writes)
+- **Geo Libraries**: Uber H3, Google S2 Geometry
+- **Protocol**: OpenRTB 2.5
+
+### Quick Start
+
+```bash
+# Start Aerospike
+docker-compose up -d
+
+# Build and run
+mvn clean package
+java -jar target/rtb-engine-0.0.1-SNAPSHOT.jar
+
+# Run tests
+./test-phase1.sh
+./test-phase2.sh
+```
+
